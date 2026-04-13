@@ -26,7 +26,7 @@
   --gold:        #d4a72c;
   --gold-l:      #f0c84a;
 
-  --water:       #1a8fc4;
+  --water:       #69cfff;
   --water-l:     #4dbde8;
   --water-ghost: rgba(26,143,196,.2);
   --water-border:rgba(77,189,232,.4);
@@ -49,14 +49,6 @@ body {
 }
 
 /* ── HEADER ── */
-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: .8rem 1.5rem;
-  background: var(--brand-dark);
-  border-bottom: 1px solid var(--brand-border);
-  position: sticky; top: 0; z-index: 50;
-  flex-wrap: wrap; gap: .5rem;
-}
 header h1 {
   font-family: 'Playfair Display', serif;
   font-size: 1.3rem; color: var(--brand-pale); font-weight: 700;
@@ -80,6 +72,7 @@ header h1 {
   background: rgba(1,77,45,.5);
   font-size: .7rem; color: var(--cream-mute);
   border-bottom: 1px solid rgba(1,116,68,.2);
+  position: sticky; top: 0; z-index: 50;
 }
 .leg { display: flex; align-items: center; gap: 4px; }
 .leg-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid; flex-shrink: 0; }
@@ -113,13 +106,13 @@ header h1 {
 }
 
 /* Tailles par zone */
-.marker.champ  .mk { width: 34px; height: 34px; background: var(--brand-mid); }
-.marker.serre  .mk { width: 34px; height: 34px; background: #4a5a48; }
-.marker.verger .mk { width: 42px; height: 42px; background: var(--brand); font-size: 11px; }
+.marker.champ  .mk { width: 55px; height: 55px; background: var(--brand-mid); }
+.marker.serre  .mk { width: 55px; height: 55px; background: #737373; }
+.marker.verger .mk { width: 55px; height: 55px; background: #636363; font-size: 11px; }
 
 /* États */
 .marker.planted .mk {
-  border-color: rgba(2,163,95,.8);
+  border-color: rgba(0, 182, 106, 0.8);
   box-shadow: 0 0 8px rgba(2,163,95,.35);
   background: #014d2d;
 }
@@ -300,11 +293,6 @@ header h1 {
 </script>
 <!-- ════════════════════════════ -->
 
-<header>
-  <h1>🌿 La Ferme — Grapeseed</h1>
-  <div id="status-dot">Non connecté</div>
-</header>
-
 <div class="legend-bar">
   <div class="leg"><div class="leg-dot" style="background:#025c36;border-color:rgba(232,245,238,.2)"></div> Champ libre</div>
   <div class="leg"><div class="leg-dot" style="background:#4a5a48;border-color:rgba(232,245,238,.2)"></div> Serre libre</div>
@@ -312,21 +300,7 @@ header h1 {
   <div class="leg"><div class="leg-dot" style="background:#014d2d;border-color:rgba(2,163,95,.8)"></div> En pousse 🌱</div>
   <div class="leg"><div class="leg-dot" style="background:#0a3d55;border-color:rgba(77,189,232,.8)"></div> Arrosé 💧</div>
   <div class="leg"><div class="leg-dot" style="background:#2a3a10;border-color:rgba(240,200,74,.8)"></div> Prêt ✨</div>
-</div>
-
-<div id="setup-banner">
-  <strong>⚙️ Configuration requise</strong> — Remplace <code>REMPLACE_PAR_TON_URL</code> et <code>REMPLACE_PAR_TA_CLE_ANON</code> dans le source HTML.<br>
-  Exécute ce SQL dans l'éditeur Supabase :
-  <pre>CREATE TABLE parcelles (
-  id TEXT PRIMARY KEY,
-  culture_id TEXT,
-  plante_par TEXT,
-  plante_le TIMESTAMPTZ,
-  arrose_le TIMESTAMPTZ,
-  recolte_le TIMESTAMPTZ
-);
-ALTER TABLE parcelles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_all" ON parcelles FOR ALL USING (true) WITH CHECK (true);</pre>
+  <div style="margin-left:auto"><div id="status-dot">Non connecté</div></div>
 </div>
 
 <div id="map-wrap">
@@ -349,35 +323,35 @@ CREATE POLICY "public_all" ON parcelles FOR ALL USING (true) WITH CHECK (true);<
 // ══════════════════════════════════════════════
 const PARCELLES = [
   // SERRES (gris — A à H)
-  { id:'A', zone:'serre',  left:13.5, top:25.5 },
-  { id:'B', zone:'serre',  left:17.5, top:18.5 },
-  { id:'C', zone:'serre',  left:19.8, top:22.5 },
-  { id:'D', zone:'serre',  left:19.2, top:31.0 },
-  { id:'E', zone:'serre',  left:21.5, top:34.0 },
-  { id:'F', zone:'serre',  left:24.8, top:33.5 },
-  { id:'G', zone:'serre',  left:42.5, top:51.5 },
-  { id:'H', zone:'serre',  left:64.8, top:52.0 },
+  { id:'A', zone:'serre',  left:14.75, top:28.5 },
+  { id:'B', zone:'serre',  left:21, top:21 },
+  { id:'C', zone:'serre',  left:23, top:28 },
+  { id:'D', zone:'serre',  left:22.5, top:37.5 },
+  { id:'E', zone:'serre',  left:23.25, top:42.75 },
+  { id:'F', zone:'serre',  left:28.50, top:43.75 },
+  { id:'G', zone:'serre',  left:45, top:48.5 },
+  { id:'H', zone:'serre',  left:71.50, top:51.50 },
 
   // CHAMPS (vert — 1 à 14)
-  { id:'1',  zone:'champ', left:20.5, top:40.5 },
-  { id:'2',  zone:'champ', left:20.0, top:46.5 },
-  { id:'3',  zone:'champ', left:23.8, top:44.5 },
-  { id:'4',  zone:'champ', left:24.5, top:38.5 },
-  { id:'5',  zone:'champ', left:30.5, top:31.0 },
-  { id:'6',  zone:'champ', left:38.5, top:20.5 },
-  { id:'7',  zone:'champ', left:34.2, top:11.0 },
-  { id:'8',  zone:'champ', left:39.0, top:10.0 },
-  { id:'9',  zone:'champ', left:48.0, top:11.5 },
-  { id:'10', zone:'champ', left:62.5, top:36.5 },
-  { id:'11', zone:'champ', left:65.0, top:43.5 },
-  { id:'12', zone:'champ', left:65.5, top:53.5 },
-  { id:'13', zone:'champ', left:80.5, top:63.5 },
-  { id:'14', zone:'champ', left:86.5, top:57.0 },
+  { id:'1',  zone:'champ', left:20.75, top:45.25 },
+  { id:'2',  zone:'champ', left:22.50, top:50 },
+  { id:'3',  zone:'champ', left:25.8, top:47 },
+  { id:'4',  zone:'champ', left:25.75, top:40 },
+  { id:'5',  zone:'champ', left:31.25, top:35 },
+  { id:'6',  zone:'champ', left:43.5, top:20.75 },
+  { id:'7',  zone:'champ', left:37, top:11.5 },
+  { id:'8',  zone:'champ', left:41.0, top:10 },
+  { id:'9',  zone:'champ', left:50, top:14 },
+  { id:'10', zone:'champ', left:60.5, top:40 },
+  { id:'11', zone:'champ', left:65.25, top:44.5 },
+  { id:'12', zone:'champ', left:71.5, top:56 },
+  { id:'13', zone:'champ', left:84, top:64.5 },
+  { id:'14', zone:'champ', left:87.5, top:59 },
 
   // VERGERS — positionnés sur les fruits de la carte d'origine
-  { id:'V1', zone:'verger', left:49.5, top:26.0, nom:'Verger Pomme',   emoji:'🍎' },
-  { id:'V2', zone:'verger', left:37.5, top:43.5, nom:'Verger Citron',  emoji:'🍋' },
-  { id:'V3', zone:'verger', left:50.0, top:51.0, nom:'Verger Orange',  emoji:'🍊' },
+  { id:'V1', zone:'verger', left:51, top:28, nom:'Verger Pomme',   emoji:'🍎' },
+  { id:'V2', zone:'verger', left:36, top:41, nom:'Verger Citron',  emoji:'🍋' },
+  { id:'V3', zone:'verger', left:51.75, top:51.5, nom:'Verger Orange',  emoji:'🍊' },
 ];
 
 // ══════════════════════════════════════════════
@@ -385,22 +359,20 @@ const PARCELLES = [
 // ══════════════════════════════════════════════
 const CULTURES = [
   // Champs uniquement
-  { id:'pomme_t', nom:'Pomme de terre', emoji:'🥔', duree:35, zones:['champ'] },
-  { id:'tomate',  nom:'Tomate',         emoji:'🍅', duree:25, zones:['champ'] },
-  { id:'mais',    nom:'Maïs',           emoji:'🌽', duree:45, zones:['champ'] },
+  { id:'pomme_t', nom:'Pomme de terre', emoji:'🥔', duree:60, zones:['champ'] },
+  { id:'tomate',  nom:'Tomate',         emoji:'🍅', duree:60, zones:['champ'] },
+  { id:'mais',    nom:'Maïs',           emoji:'🌽', duree:60, zones:['champ'] },
   // Serres uniquement
-  { id:'chou',      nom:'Chou',      emoji:'🥦', duree:30, zones:['serre'] },
-  { id:'citrouille',nom:'Citrouille',emoji:'🎃', duree:40, zones:['serre'] },
+  { id:'chou',      nom:'Chou',      emoji:'🥦', duree:60, zones:['serre'] },
+  { id:'citrouille',nom:'Citrouille',emoji:'🎃', duree:60, zones:['serre'] },
   // Vergers — chaque verger a sa propre culture fixe
-  { id:'pomme',  nom:'Pomme',  emoji:'🍎', duree:60, zones:['verger'] },
-  { id:'orange', nom:'Orange', emoji:'🍊', duree:55, zones:['verger'] },
-  { id:'citron', nom:'Citron', emoji:'🍋', duree:50, zones:['verger'] },
+  { id:'pomme',  nom:'Pomme',  emoji:'🍎', duree:120, zones:['verger'] },
+  { id:'orange', nom:'Orange', emoji:'🍊', duree:120, zones:['verger'] },
+  { id:'citron', nom:'Citron', emoji:'🍋', duree:120, zones:['verger'] },
 ];
 
 // Correspondance verger → culture fixe
 const VERGER_CULTURE = { V1:'pomme', V2:'citron', V3:'orange' };
-
-const WATER_BONUS = 0.30;
 
 // ══════════════════════════════════════════════
 // ÉTAT & SUPABASE
@@ -550,15 +522,15 @@ function openModal(id) {
           <p>${cult?.nom || data.culture_id}</p>
           <span>Planté${data.plante_par ? ' par <strong>'+data.plante_par+'</strong>' : ''} — ${dateStr}</span><br>
           <span class="${ready?'highlight':''}">${ready ? '✨ Prêt à récolter !' : '⏱ Récolte dans : '+label}</span>
-          ${watered ? '<br><span>💧 Arrosé — temps réduit de 30%</span>' : ''}
+          ${watered ? '<br><span>💧 Arrosé — temps réduit de 10 minutes !</span>' : ''}
         </div>
       </div>
       <div class="fld">
-        <label>Ton pseudo</label>
-        <input type="text" id="modal-who" placeholder="ex: Jean" maxlength="20">
+        <label>Ton prénom</label>
+        <input type="text" id="modal-who" placeholder="ex: Jean" maxlength="50">
       </div>
       <div class="actions">
-        ${!watered && !ready ? `<button class="btn btn-water" onclick="waterParcel()">💧 Arroser</button>` : ''}
+        ${!ready ? `<button class="btn btn-water" onclick="waterParcel()">💧 Arroser</button>` : ''}
         ${ready ? `<button class="btn btn-harvest" onclick="harvestParcel()">✂️ Récolter</button>` : ''}
         <button class="btn btn-danger" onclick="clearParcel()">🗑 Effacer</button>
         <button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
@@ -654,11 +626,17 @@ async function waterParcel() {
   const data = state[currentId]; if (!data) return;
   const now = Date.now();
   const rem = new Date(data.recolte_le).getTime() - now;
-  if (rem <= 0) return toast('Déjà prêt à récolter !');
+  if (rem <= 0) return toast('Déjà prêt !');
+  const WATER_COOLDOWN = 20 * 60000; // 20 minutes
+  if (data.arrose_le && (now - new Date(data.arrose_le).getTime()) < WATER_COOLDOWN) {
+    const attente = Math.ceil((WATER_COOLDOWN - (now - new Date(data.arrose_le).getTime())) / 60000);
+    return toast(`💧 Arrosage disponible dans ${attente} min`);
+  }
+  const WATER_MINUTES = 10; // ← minutes retirées, change cette valeur
   const updated = {
-    ...data,
-    arrose_le: new Date().toISOString(),
-    recolte_le: new Date(now + rem * (1 - WATER_BONUS)).toISOString(),
+  ...data,
+  arrose_le: new Date().toISOString(),
+  recolte_le: new Date(now + rem - WATER_MINUTES * 60000).toISOString(),
   };
   state[currentId] = updated;
   await dbUpsert(updated);
