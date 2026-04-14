@@ -463,7 +463,6 @@ function renderAll() {
   wrap.querySelectorAll('.marker').forEach(m => m.remove());
   PARCELLES.forEach(p => wrap.appendChild(buildMarker(p)));
 }
-
 function buildMarker(p) {
   const el = document.createElement('div');
   el.className = `marker ${p.zone}`;
@@ -481,9 +480,7 @@ function buildMarker(p) {
   const data = state[p.id];
 
   if (!data?.culture_id) {
-    // Vide
     if (p.zone === 'verger') {
-      // Affiche l'emoji du fruit du verger même vide
       mk.innerHTML = `<span style="font-size:18px;line-height:1">${p.emoji}</span><span style="font-size:8px;opacity:.65;margin-top:1px">${p.id}</span>`;
     } else {
       mk.innerHTML = `<span style="font-size:11px;font-weight:500;opacity:.8">${p.id}</span>`;
@@ -537,21 +534,19 @@ setInterval(() => {
 // ══════════════════════════════════════════════
 let currentId = null, selectedCrop = null;
 
-function openModal(id) {
+async function openModal(id) {
   currentId = id; selectedCrop = null;
   const p = PARCELLES.find(x => x.id === id);
   const data = state[id];
   const zoneLabels = { champ:'Champ', serre:'Serre', verger:'Verger' };
   const zl = zoneLabels[p.zone];
 
-  // Titre avec badge zone
   document.getElementById('modal-title').innerHTML =
     `${zl} ${p.id} <span class="modal-zone-badge">${zl}</span>`;
 
   const body = document.getElementById('modal-body');
 
   if (data?.culture_id) {
-    // ── Parcelle plantée ──
     const cult = CULTURES.find(c => c.id === data.culture_id);
     const { ready, label } = timerInfo(data);
     const dateStr = new Date(data.plante_le).toLocaleString('fr-FR');
@@ -579,36 +574,45 @@ function openModal(id) {
       </div>`;
 
   } else {
-    // ── Parcelle vide ──
+    // Parcelle vide
+    let derniereInfo = null;
+    if (sb) {
+      const { data: row } = await sb.from('parcelles').select('derniere_culture').eq('id', p.id).maybeSingle();
+      if (row?.derniere_culture) {
+        derniereInfo = CULTURES.find(c => c.id === row.derniere_culture);
+      }
+    }
+    const derniereHtml = derniereInfo ? `
+      <div style="background:rgba(1,116,68,.1);border:1px solid var(--brand-border);border-radius:10px;padding:.6rem 1rem;margin-bottom:1rem;font-size:.8rem;color:var(--cream-mute);">
+        🔄 Dernière culture : ${derniereInfo.emoji} <strong style="color:var(--cream-dim)">${derniereInfo.nom}</strong>
+      </div>` : '';
 
     if (p.zone === 'verger') {
-      // Verger : culture fixe, pas de choix
       const forcedId = VERGER_CULTURE[p.id];
       const cult = CULTURES.find(c => c.id === forcedId);
       body.innerHTML = `
-        <div style="text-align:center;padding:1rem 0 .5rem">
-          <div style="font-size:3rem;margin-bottom:.5rem">${cult.emoji}</div>
-          <p style="font-weight:500;font-size:1rem;color:var(--brand-pale)">${cult.nom}</p>
-          <p style="font-size:.8rem;color:var(--cream-mute);margin-top:.3rem">Temps de pousse : ${cult.duree} min — Arrosage : −30%</p>
-        </div>
-        <div class="fld" style="margin-top:1rem">
+        ${derniereHtml}
+        <div class="fld">
           <label>Ton prénom</label>
           <input type="text" id="modal-who" placeholder="ex: Jean" maxlength="20">
+        </div>
+        <div style="background:rgba(1,116,68,.15);border:1px solid var(--brand-border);border-radius:10px;padding:.8rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.75rem;">
+          <span style="font-size:2rem">${cult?.emoji}</span>
+          <div>
+            <div style="font-weight:500;color:var(--cream)">${cult?.nom}</div>
+            <div style="font-size:.78rem;color:var(--cream-mute)">Culture fixe — ${cult?.duree} min</div>
+          </div>
         </div>
         <div class="actions">
           <button class="btn btn-primary" onclick="plantVerger('${forcedId}')">🌱 Planter</button>
           <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
         </div>`;
+
     } else {
-      // Champ ou serre : choix parmi les cultures autorisées
+      // Champ ou serre
       const culturesZone = CULTURES.filter(c => c.zones.includes(p.zone));
-      const derniere = state[p.id]?.derniere_culture;
-      const derniereInfo = derniere ? CULTURES.find(c => c.id === derniere) : null;
       body.innerHTML = `
-        ${derniereInfo ? `
-        <div style="background:rgba(1,116,68,.1);border:1px solid var(--brand-border);border-radius:10px;padding:.6rem 1rem;margin-bottom:1rem;font-size:.8rem;color:var(--cream-mute);">
-          🔄 Dernière culture : ${derniereInfo.emoji} <strong style="color:var(--cream-dim)">${derniereInfo.nom}</strong>
-        </div>` : ''}
+        ${derniereHtml}
         <div class="fld">
           <label>Ton prénom</label>
           <input type="text" id="modal-who" placeholder="ex: Jean" maxlength="20">
@@ -694,26 +698,27 @@ async function waterParcel() {
 }
 
 async function harvestParcel() {
-  const cult = CULTURES.find(c => c.id === state[currentId]?.culture_id);
+  const data = state[currentId];
+  const cult = CULTURES.find(c => c.id === data?.culture_id);
+  const who = document.getElementById('modal-who')?.value.trim() || data?.plante_par || null;
   state[currentId] = null;
   await dbDelete(currentId);
+  if (cult) await sb?.from('parcelles').upsert({ id: currentId, culture_id: null, derniere_culture: cult.id });
+  await dbLog(currentId, cult?.id, 'récolté', who);
   closeModal(); renderAll();
   toast(`✂️ ${cult?.emoji} ${cult?.nom} récolté(e) !`);
 }
 
 async function clearParcel() {
   if (!confirm('Effacer cette parcelle ?')) return;
+  const data = state[currentId];
+  const cult = CULTURES.find(c => c.id === data?.culture_id);
   state[currentId] = null;
-  const plantePar = state[currentId]?.plante_par;
-  await dbLog(currentId, cult.id, 'récolté', plantePar);
-  await sb.from('parcelles').upsert({ id: currentId, derniere_culture: cult.id });
-  const cultClear = CULTURES.find(c => c.id === state[currentId]?.culture_id);
-  if (cultClear) await sb?.from('parcelles').upsert({ id: currentId, derniere_culture: cultClear.id });
+  if (cult) await sb?.from('parcelles').upsert({ id: currentId, culture_id: null, derniere_culture: cult.id });
+  await dbLog(currentId, cult?.id, 'effacé', null);
   await dbDelete(currentId);
   closeModal(); renderAll();
   toast('Parcelle libérée.');
-  closeModal(); renderAll();
-  toast(`✂️ ${cult?.emoji} ${cult?.nom} récolté(e) !`);
 }
 
 document.getElementById('modal-bg').addEventListener('click', e => {
