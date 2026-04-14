@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>La Ferme — Carte de Grapeseed</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
 <style>
 :root {
   /* Palette dérivée de #017444 */
@@ -300,7 +300,10 @@ header h1 {
   <div class="leg"><div class="leg-dot" style="background:#014d2d;border-color:rgba(2,163,95,.8)"></div> En pousse 🌱</div>
   <div class="leg"><div class="leg-dot" style="background:#0a3d55;border-color:rgba(77,189,232,.8)"></div> Arrosé 💧</div>
   <div class="leg"><div class="leg-dot" style="background:#2a3a10;border-color:rgba(240,200,74,.8)"></div> Prêt ✨</div>
-  <div style="margin-left:auto"><div id="status-dot">Non connecté</div></div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+    <button onclick="toggleHistorique()" style="background:rgba(1,116,68,.2);border:1px solid var(--brand-border);color:var(--cream-dim);font-size:.7rem;padding:3px 10px;border-radius:20px;cursor:pointer;">📋 Historique</button>
+  <div id="status-dot">Non connecté</div>
+</div>
 </div>
 
 <div id="map-wrap">
@@ -389,8 +392,47 @@ if (SUPABASE_URL !== 'REMPLACE_PAR_TON_URL') {
 }
 
 async function dbUpsert(row) { if (sb) { const {error} = await sb.from('parcelles').upsert(row); if(error) console.error(error); } }
-async function dbDelete(id)  { if (sb) { const {error} = await sb.from('parcelles').delete().eq('id',id); if(error) console.error(error); } }
+async function dbDelete(id) {
+  if (!sb) return;
+  const { error } = await sb.from('parcelles').upsert({
+    id,
+    culture_id: null,
+    plante_par: null,
+    plante_le: null,
+    arrose_le: null,
+    recolte_le: null
+  });
+  if (error) console.error(error);
+}
+async function dbLog(parcelle_id, culture_id, action, plante_par) {
+  if (!sb) return;
+  await sb.from('historique').insert({ parcelle_id, culture_id, action, plante_par: plante_par || null });
+}
+async function toggleHistorique() {
+  const panel = document.getElementById('histo-panel');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    await loadHistorique();
+  } else {
+    panel.style.display = 'none';
+  }
+}
 
+async function loadHistorique() {
+  const content = document.getElementById('histo-content');
+  if (!sb) { content.textContent = 'Non connecté.'; return; }
+  const { data, error } = await sb.from('historique').select('*').order('created_at', { ascending: false }).limit(50);
+  if (error || !data?.length) { content.textContent = 'Aucun historique.'; return; }
+  const cult = id => CULTURES.find(c => c.id === id);
+  content.innerHTML = data.map(r => {
+    const c = cult(r.culture_id);
+    const date = new Date(r.created_at).toLocaleString('fr-FR');
+    const par = r.plante_par ? ` par <strong>${r.plante_par}</strong>` : '';
+    return `<div style="padding:5px 0;border-bottom:1px solid rgba(1,116,68,.15);">
+      ${c?.emoji||'?'} <strong>${c?.nom||r.culture_id}</strong> — ${r.action}${par} — Parcelle <strong>${r.parcelle_id}</strong> — ${date}
+    </div>`;
+  }).join('');
+}
 async function loadAll() {
   if (!sb) { setStatus('Mode démo (Supabase non configuré)', false); renderAll(); return; }
   const { data, error } = await sb.from('parcelles').select('*');
@@ -550,7 +592,7 @@ function openModal(id) {
           <p style="font-size:.8rem;color:var(--cream-mute);margin-top:.3rem">Temps de pousse : ${cult.duree} min — Arrosage : −30%</p>
         </div>
         <div class="fld" style="margin-top:1rem">
-          <label>Ton pseudo</label>
+          <label>Ton prénom</label>
           <input type="text" id="modal-who" placeholder="ex: Jean" maxlength="20">
         </div>
         <div class="actions">
@@ -560,9 +602,15 @@ function openModal(id) {
     } else {
       // Champ ou serre : choix parmi les cultures autorisées
       const culturesZone = CULTURES.filter(c => c.zones.includes(p.zone));
+      const derniere = state[p.id]?.derniere_culture;
+      const derniereInfo = derniere ? CULTURES.find(c => c.id === derniere) : null;
       body.innerHTML = `
+        ${derniereInfo ? `
+        <div style="background:rgba(1,116,68,.1);border:1px solid var(--brand-border);border-radius:10px;padding:.6rem 1rem;margin-bottom:1rem;font-size:.8rem;color:var(--cream-mute);">
+          🔄 Dernière culture : ${derniereInfo.emoji} <strong style="color:var(--cream-dim)">${derniereInfo.nom}</strong>
+        </div>` : ''}
         <div class="fld">
-          <label>Ton pseudo</label>
+          <label>Ton prénom</label>
           <input type="text" id="modal-who" placeholder="ex: Jean" maxlength="20">
         </div>
         <div class="fld">
@@ -618,6 +666,7 @@ async function doPlant(id, cultureId) {
   };
   state[id] = row;
   await dbUpsert(row);
+  await dbLog(id, cultureId, 'planté', who || null);
   closeModal(); renderAll();
   toast(`${cult.emoji} ${cult.nom} planté(e) !`);
 }
@@ -655,9 +704,16 @@ async function harvestParcel() {
 async function clearParcel() {
   if (!confirm('Effacer cette parcelle ?')) return;
   state[currentId] = null;
+  const plantePar = state[currentId]?.plante_par;
+  await dbLog(currentId, cult.id, 'récolté', plantePar);
+  await sb.from('parcelles').upsert({ id: currentId, derniere_culture: cult.id });
+  const cultClear = CULTURES.find(c => c.id === state[currentId]?.culture_id);
+  if (cultClear) await sb?.from('parcelles').upsert({ id: currentId, derniere_culture: cultClear.id });
   await dbDelete(currentId);
   closeModal(); renderAll();
   toast('Parcelle libérée.');
+  closeModal(); renderAll();
+  toast(`✂️ ${cult?.emoji} ${cult?.nom} récolté(e) !`);
 }
 
 document.getElementById('modal-bg').addEventListener('click', e => {
@@ -681,5 +737,17 @@ function toast(msg) {
 loadAll();
 subscribeRT();
 </script>
+<!-- HISTORIQUE -->
+<div id="histo-panel" style="display:none;max-width:1200px;margin:.75rem auto;padding:0 1rem;">
+  <div style="background:rgba(1,77,45,.25);border:1px solid var(--brand-border);border-radius:12px;padding:1rem 1.5rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+      <span style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--brand-pale);">📋 Historique des cultures</span>
+      <button onclick="toggleHistorique()" style="background:none;border:none;color:var(--cream-mute);cursor:pointer;font-size:1rem;">✕</button>
+    </div>
+    <div id="histo-content" style="font-size:.8rem;color:var(--cream-dim);max-height:250px;overflow-y:auto;">
+      Chargement…
+    </div>
+  </div>
+</div>
 </body>
 </html>
