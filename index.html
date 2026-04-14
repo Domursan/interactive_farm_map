@@ -302,6 +302,7 @@ header h1 {
   <div class="leg"><div class="leg-dot" style="background:#2a3a10;border-color:rgba(240,200,74,.8)"></div> Prêt ✨</div>
   <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
     <button onclick="toggleHistorique()" style="background:rgba(1,116,68,.2);border:1px solid var(--brand-border);color:var(--cream-dim);font-size:.7rem;padding:3px 10px;border-radius:20px;cursor:pointer;">📋 Historique</button>
+<button onclick="refreshMap()" id="btn-refresh" style="background:rgba(1,116,68,.2);border:1px solid var(--brand-border);color:var(--cream-dim);font-size:.7rem;padding:3px 10px;border-radius:20px;cursor:pointer;">🔄 Actualiser</button>
   <div id="status-dot">Non connecté</div>
 </div>
 </div>
@@ -453,6 +454,20 @@ function subscribeRT() {
       renderAll();
     }
   ).subscribe();
+}
+
+async function refreshMap() {
+  const btn = document.getElementById('btn-refresh');
+  btn.textContent = '⏳ Actualisation…';
+  btn.style.opacity = '.5';
+  btn.style.pointerEvents = 'none';
+  await loadAll();
+  btn.textContent = '✅ Actualisé !';
+  setTimeout(() => {
+    btn.textContent = '🔄 Actualiser';
+    btn.style.opacity = '';
+    btn.style.pointerEvents = '';
+  }, 5000);
 }
 
 // ══════════════════════════════════════════════
