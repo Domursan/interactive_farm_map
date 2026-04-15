@@ -781,26 +781,31 @@ async function harvestParcel() {
   const data = state[currentId];
   const cult = CULTURES.find(c => c.id === data?.culture_id);
   const who = document.getElementById('modal-who')?.value.trim() || data?.plante_par || null;
-  const repos_jusqua = new Date(Date.now() + 60 * 60000).toISOString();
+  const p = PARCELLES.find(x => x.id === currentId);
+  const repos_jusqua = p.zone !== 'verger' ? new Date(Date.now() + 60 * 60000).toISOString() : null;
   const row = { id: currentId, culture_id: null, derniere_culture: cult?.id || null, repos_jusqua };
   state[currentId] = row;
   await sb?.from('parcelles').upsert(row);
   await dbLog(currentId, cult?.id, 'récolté', who);
   closeModal(); renderAll();
-  toast(`✂️ ${cult?.emoji} ${cult?.nom} récolté(e) ! Repos 1h.`);
+  const msg = p.zone === 'verger'
+    ? `✂️ ${cult?.emoji} ${cult?.nom} récolté(e) !`
+    : `✂️ ${cult?.emoji} ${cult?.nom} récolté(e) ! Repos 1h.`;
+  toast(msg);
 }
 
 async function clearParcel() {
   if (!confirm('Effacer cette parcelle ?')) return;
   const data = state[currentId];
   const cult = CULTURES.find(c => c.id === data?.culture_id);
-  const repos_jusqua = new Date(Date.now() + 60 * 60000).toISOString();
+  const p = PARCELLES.find(x => x.id === currentId);
+  const repos_jusqua = p.zone !== 'verger' ? new Date(Date.now() + 60 * 60000).toISOString() : null;
   const row = { id: currentId, culture_id: null, derniere_culture: cult?.id || null, repos_jusqua };
   state[currentId] = row;
   await sb?.from('parcelles').upsert(row);
   await dbLog(currentId, cult?.id, 'effacé', null);
   closeModal(); renderAll();
-  toast('Parcelle libérée. Repos 1h.');
+  toast(p.zone === 'verger' ? 'Parcelle libérée.' : 'Parcelle libérée. Repos 1h.');
 }
 
 document.getElementById('modal-bg').addEventListener('click', e => {
