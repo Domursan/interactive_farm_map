@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>V.12 La Ferme — Carte de Grapeseed</title>
+<title>V.13 La Ferme — Carte de Grapeseed</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
 <style>
@@ -793,6 +793,8 @@ async function harvestParcel() {
   const data = state[currentId];
   const cult = CULTURES.find(c => c.id === data?.culture_id);
   const who = document.getElementById('modal-who')?.value.trim() || data?.plante_par || null;
+  const p = PARCELLES.find(x => x.id === currentId);
+  const repos_jusqua = p.zone !== 'verger' ? new Date(Date.now() + 60 * 60000).toISOString() : null;
 
   if (sb) {
     const { error } = await sb.from('parcelles').update({
@@ -800,15 +802,19 @@ async function harvestParcel() {
       plante_par: null,
       plante_le: null,
       arrose_le: null,
-      recolte_le: null
+      recolte_le: null,
+      derniere_culture: cult?.id || null,
+      repos_jusqua
     }).eq('id', currentId);
     if (error) { console.error('Erreur harvest:', error); toast('Erreur : ' + error.message); return; }
   }
 
-  state[currentId] = { id: currentId, culture_id: null };
+  const row = { id: currentId, culture_id: null, plante_par: null, plante_le: null, arrose_le: null, recolte_le: null, derniere_culture: cult?.id || null, repos_jusqua };
+  state[currentId] = row;
   await dbLog(currentId, cult?.id, 'récolté', who);
   closeModal(); renderAll();
-  toast(`✂️ ${cult?.emoji} ${cult?.nom} récolté(e) !`);
+  const msg = p.zone !== 'verger' ? `✂️ ${cult?.emoji} ${cult?.nom} récolté(e) ! Repos 1h.` : `✂️ ${cult?.emoji} ${cult?.nom} récolté(e) !`;
+  toast(msg);
 }
 
 async function clearParcel() {
