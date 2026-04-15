@@ -453,14 +453,21 @@ async function loadAll() {
 
 function subscribeRT() {
   if (!sb) return;
-  sb.channel('rt').on('postgres_changes',
-    { event:'*', schema:'public', table:'parcelles' },
-    payload => {
-      if (payload.eventType === 'DELETE') state[payload.old.id] = null;
-      else state[payload.new.id] = payload.new;
-      renderAll();
-    }
-  ).subscribe();
+  sb.channel('parcelles-rt')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'parcelles' },
+      payload => {
+        if (payload.eventType === 'DELETE') {
+          state[payload.old.id] = null;
+        } else {
+          state[payload.new.id] = payload.new;
+        }
+        renderAll();
+      }
+    )
+    .subscribe(status => {
+      console.log('RT status:', status);
+    });
 }
 
 async function refreshMap() {
