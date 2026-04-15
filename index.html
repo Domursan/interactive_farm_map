@@ -442,9 +442,14 @@ async function loadHistorique() {
   }).join('');
 }
 async function loadAll() {
-  if (!sb) { setStatus('Mode démo (Supabase non configuré)', false); renderAll(); return; }
+  if (!sb) { setStatus('Mode démo', false); renderAll(); return; }
   const { data, error } = await sb.from('parcelles').select('*');
-  if (error) { setStatus('Erreur lecture base', false); renderAll(); return; }
+  if (error) {
+    console.error('Erreur loadAll:', error);
+    setStatus('Erreur : ' + error.message, false);
+    renderAll();
+    return;
+  }
   PARCELLES.forEach(p => state[p.id] = null);
   (data||[]).forEach(r => state[r.id] = r);
   setStatus('Connecté ✓', true);
@@ -790,7 +795,16 @@ async function harvestParcel() {
   const who = document.getElementById('modal-who')?.value.trim() || data?.plante_par || null;
   const p = PARCELLES.find(x => x.id === currentId);
   const repos_jusqua = p.zone !== 'verger' ? new Date(Date.now() + 60 * 60000).toISOString() : null;
-  const row = { id: currentId, culture_id: null, derniere_culture: cult?.id || null, repos_jusqua };
+  const row = {
+    id: currentId,
+    culture_id: null,
+    plante_par: null,
+    plante_le: null,
+    arrose_le: null,
+    recolte_le: null,
+    derniere_culture: cult?.id || null,
+    repos_jusqua
+  };
   state[currentId] = row;
   await sb?.from('parcelles').upsert(row);
   await dbLog(currentId, cult?.id, 'récolté', who);
