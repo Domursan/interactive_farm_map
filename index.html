@@ -282,6 +282,13 @@ header h1 {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--brand-deep); }
 ::-webkit-scrollbar-thumb { background: var(--brand-mid); border-radius: 3px; }
+
+.marker.repos .mk {
+  border-color: rgba(192,57,43,.5);
+  background: #2a1510;
+  opacity: .75;
+}
+
 </style>
 </head>
 <body>
@@ -495,24 +502,48 @@ function buildMarker(p) {
   const data = state[p.id];
 
   if (!data?.culture_id) {
-    if (p.zone === 'verger') {
-      mk.innerHTML = `<span style="font-size:18px;line-height:1">${p.emoji}</span><span style="font-size:8px;opacity:.65;margin-top:1px">${p.id}</span>`;
+    const enRepos = data?.repos_jusqua && new Date(data.repos_jusqua).getTime() > Date.now();
+    if (enRepos) {
+      el.classList.add('repos');
+      const diff = new Date(data.repos_jusqua).getTime() - Date.now();
+      const m = Math.floor(diff / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      const label = m > 0 ? `${m}m${String(s).padStart(2,'0')}s` : `${s}s`;
+      if (p.zone === 'verger') {
+        mk.innerHTML = `<span style="font-size:16px;line-height:1">😴</span><span style="font-size:8px;opacity:.65;margin-top:1px">${p.id}</span>`;
+      } else {
+        mk.innerHTML = `<span style="font-size:9px;opacity:.8">😴 ${p.id}</span>`;
+      }
+      timer.className = 'mk-timer';
+      timer.textContent = `Repos ${label}`;
     } else {
-      mk.innerHTML = `<span style="font-size:11px;font-weight:500;opacity:.8">${p.id}</span>`;
+      if (p.zone === 'verger') {
+        mk.innerHTML = `<span style="font-size:18px;line-height:1">${p.emoji}</span><span style="font-size:8px;opacity:.65;margin-top:1px">${p.id}</span>`;
+      } else {
+        mk.innerHTML = `<span style="font-size:11px;font-weight:500;opacity:.8">${p.id}</span>`;
+      }
+      timer.style.display = 'none';
     }
-    timer.style.display = 'none';
+
   } else {
+    // Parcelle plantée
     const cult = CULTURES.find(c => c.id === data.culture_id);
     const { ready, label } = timerInfo(data);
-    mk.innerHTML = `<span class="mk-emoji">${cult?.emoji||'?'}</span><span class="mk-label">${p.id}</span>`;
+    const watered = !!data.arrose_le;
+
     if (ready) {
       el.classList.add('ready');
       timer.className = 'mk-timer rt';
       timer.textContent = '✨ Prêt';
     } else {
-      el.classList.add('planted');
-      if (data.arrose_le) el.classList.add('watered');
+      el.classList.add(watered ? 'watered' : 'planted');
       timer.textContent = label;
+    }
+
+    if (p.zone === 'verger') {
+      mk.innerHTML = `<span style="font-size:18px;line-height:1">${cult?.emoji||'?'}</span><span style="font-size:8px;opacity:.65;margin-top:1px">${p.id}</span>`;
+    } else {
+      mk.innerHTML = `<span class="mk-emoji">${cult?.emoji||'?'}</span>`;
     }
   }
 
@@ -531,16 +562,32 @@ function timerInfo(data) {
 
 // Tick toutes les secondes
 setInterval(() => {
-  document.querySelectorAll('.marker.planted, .marker.ready').forEach(el => {
+  document.querySelectorAll('.marker').forEach(el => {
     const data = state[el.dataset.id];
-    if (!data?.recolte_le) return;
-    const { ready, label } = timerInfo(data);
     const t = el.querySelector('.mk-timer');
     if (!t) return;
-    if (ready && !el.classList.contains('ready')) {
-      el.classList.remove('planted','watered'); el.classList.add('ready');
-      t.className = 'mk-timer rt'; t.textContent = '✨ Prêt';
-    } else if (!ready) { t.textContent = label; }
+
+    if (data?.culture_id && data?.recolte_le) {
+      // timer récolte existant
+      const { ready, label } = timerInfo(data);
+      if (ready && !el.classList.contains('ready')) {
+        el.classList.remove('planted','watered'); el.classList.add('ready');
+        t.className = 'mk-timer rt'; t.textContent = '✨ Prêt';
+      } else if (!ready) { t.textContent = label; }
+
+    } else if (data?.repos_jusqua) {
+      // timer repos
+      const diff = new Date(data.repos_jusqua).getTime() - Date.now();
+      if (diff <= 0) {
+        el.classList.remove('repos');
+        t.style.display = 'none';
+        state[el.dataset.id] = null;
+      } else {
+        const m = Math.floor(diff / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        t.textContent = `Repos ${m}m${String(s).padStart(2,'0')}s`;
+      }
+    }
   });
 }, 1000);
 
@@ -553,6 +600,7 @@ async function openModal(id) {
   currentId = id; selectedCrop = null;
   const p = PARCELLES.find(x => x.id === id);
   const data = state[id];
+  const enRepos = data?.repos_jusqua && new Date(data.repos_jusqua).getTime() > Date.now();
   const zoneLabels = { champ:'Champ', serre:'Serre', verger:'Verger' };
   const zl = zoneLabels[p.zone];
 
@@ -589,6 +637,23 @@ async function openModal(id) {
       </div>`;
 
   } else {
+    // Vérification repos
+    if (enRepos) {
+      const diff = new Date(data.repos_jusqua).getTime() - Date.now();
+      const m = Math.floor(diff / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      body.innerHTML = `
+        <div style="text-align:center;padding:1.5rem 0;color:var(--cream-mute);">
+          <div style="font-size:2.5rem;margin-bottom:.5rem">😴</div>
+          <div style="font-size:1rem;color:var(--cream-dim);margin-bottom:.25rem">Parcelle en repos</div>
+          <div style="font-size:.85rem">Disponible dans <strong style="color:var(--gold-l)">${m}m ${s}s</strong></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
+        </div>`;
+      document.getElementById('modal-bg').classList.add('open');
+      return;
+    }
     // Parcelle vide
     let derniereInfo = null;
     if (sb) {
@@ -716,24 +781,26 @@ async function harvestParcel() {
   const data = state[currentId];
   const cult = CULTURES.find(c => c.id === data?.culture_id);
   const who = document.getElementById('modal-who')?.value.trim() || data?.plante_par || null;
-  state[currentId] = null;
-  await dbDelete(currentId);
-  if (cult) await sb?.from('parcelles').upsert({ id: currentId, culture_id: null, derniere_culture: cult.id });
+  const repos_jusqua = new Date(Date.now() + 60 * 60000).toISOString();
+  const row = { id: currentId, culture_id: null, derniere_culture: cult?.id || null, repos_jusqua };
+  state[currentId] = row;
+  await sb?.from('parcelles').upsert(row);
   await dbLog(currentId, cult?.id, 'récolté', who);
   closeModal(); renderAll();
-  toast(`✂️ ${cult?.emoji} ${cult?.nom} récolté(e) !`);
+  toast(`✂️ ${cult?.emoji} ${cult?.nom} récolté(e) ! Repos 1h.`);
 }
 
 async function clearParcel() {
   if (!confirm('Effacer cette parcelle ?')) return;
   const data = state[currentId];
   const cult = CULTURES.find(c => c.id === data?.culture_id);
-  state[currentId] = null;
-  if (cult) await sb?.from('parcelles').upsert({ id: currentId, culture_id: null, derniere_culture: cult.id });
+  const repos_jusqua = new Date(Date.now() + 60 * 60000).toISOString();
+  const row = { id: currentId, culture_id: null, derniere_culture: cult?.id || null, repos_jusqua };
+  state[currentId] = row;
+  await sb?.from('parcelles').upsert(row);
   await dbLog(currentId, cult?.id, 'effacé', null);
-  await dbDelete(currentId);
   closeModal(); renderAll();
-  toast('Parcelle libérée.');
+  toast('Parcelle libérée. Repos 1h.');
 }
 
 document.getElementById('modal-bg').addEventListener('click', e => {
