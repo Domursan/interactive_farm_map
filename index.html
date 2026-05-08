@@ -942,12 +942,14 @@ async function doPlant(id, cultureId) {
   const who  = document.getElementById('modal-who')?.value.trim() || '';
   const cult = CULTURES.find(c => c.id === cultureId);
   const now  = new Date();
+  const p    = PARCELLES.find(x => x.id === id);
   const row  = {
     id, culture_id: cultureId,
     plante_par: who || null,
     plante_le: now.toISOString(),
     arrose_le: null,
     recolte_le: new Date(now.getTime() + cult.duree * 60000).toISOString(),
+    charrue_id: (p.zone === 'champ' && selectedPlow) ? selectedPlow : null,
   };
   state[id] = row;
   await dbUpsert(row);
@@ -1065,19 +1067,21 @@ async function loadPlows() {
     return;
   }
   try {
-    const { data } = await sb.from('charrues').select('*');
-    if (data) data.forEach(r => {
-      if (plowCounts[r.id] !== undefined) plowCounts[r.id] = r.count || 0;
-    });
+const { data } = await sb.from('charrues').select('*');
+if (data) data.forEach(r => {
+  if (plowCounts[r.id] !== undefined) plowCounts[r.id] = r.utilisations || 0;
+});
   } catch(e) { /* table absente – localStorage fallback */ }
   renderPlows();
 }
 
 async function savePlow(id) {
-  const count = plowCounts[id];
-  if (!sb) { localStorage.setItem('plow_' + id, count); return; }
-  try { await sb.from('charrues').upsert({ id, count }); } catch(e) {
-    localStorage.setItem('plow_' + id, count);
+  const utilisations = plowCounts[id];
+  if (!sb) { localStorage.setItem('plow_' + id, utilisations); return; }
+  const { error } = await sb.from('charrues').upsert({ id, utilisations });
+  if (error) {
+    console.error('savePlow error:', error);
+    localStorage.setItem('plow_' + id, utilisations);
   }
 }
 
