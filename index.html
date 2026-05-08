@@ -1077,12 +1077,18 @@ if (data) data.forEach(r => {
 
 async function savePlow(id) {
   const utilisations = plowCounts[id];
-  if (!sb) { localStorage.setItem('plow_' + id, utilisations); return; }
-  const { error } = await sb.from('charrues').upsert({ id, utilisations });
-  if (error) {
-    console.error('savePlow error:', error);
+  console.log('[savePlow] id:', id, '| utilisations:', utilisations);
+  
+  if (!sb) {
+    console.log('[savePlow] pas de Supabase, localStorage');
     localStorage.setItem('plow_' + id, utilisations);
+    return;
   }
+
+  const { data, error } = await sb.from('charrues').upsert({ id, utilisations }).select();
+  console.log('[savePlow] data:', data, '| error:', error);
+  
+  if (error) localStorage.setItem('plow_' + id, utilisations);
 }
 
 function renderPlows() {
