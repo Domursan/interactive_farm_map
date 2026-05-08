@@ -922,10 +922,15 @@ async function plantParcel() {
   if (!selectedCrop) return toast('Choisis une culture d\'abord !');
   const p = PARCELLES.find(x => x.id === currentId);
   if (p.zone === 'champ' && !selectedPlow) return toast('Choisis une charrue d\'abord !');
+  
+  // Sauvegarder avant doPlant() qui reset selectedPlow via closeModal()
+  const plowToIncrement = selectedPlow;
+  
   await doPlant(currentId, selectedCrop);
-  if (p.zone === 'champ' && selectedPlow) {
-    plowCounts[selectedPlow]++;
-    await savePlow(selectedPlow);
+  
+  if (p.zone === 'champ' && plowToIncrement) {
+    plowCounts[plowToIncrement]++;
+    await savePlow(plowToIncrement);
     renderPlows();
   }
 }
