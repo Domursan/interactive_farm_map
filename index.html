@@ -606,17 +606,21 @@ function subscribeRT() {
     .on('postgres_changes',
       { event: '*', schema: 'public', table: 'parcelles' },
       payload => {
-        if (payload.eventType === 'DELETE') {
-          state[payload.old.id] = null;
-        } else {
-          state[payload.new.id] = payload.new;
-        }
+        if (payload.eventType === 'DELETE') state[payload.old.id] = null;
+        else state[payload.new.id] = payload.new;
         renderAll();
       }
     )
-    .subscribe(status => {
-      console.log('RT status:', status);
-    });
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'charrues' },
+      payload => {
+        if (payload.new?.id && plowCounts[payload.new.id] !== undefined) {
+          plowCounts[payload.new.id] = payload.new.utilisations || 0;
+          renderPlows();
+        }
+      }
+    )
+    .subscribe();
 }
 
 async function refreshMap() {
