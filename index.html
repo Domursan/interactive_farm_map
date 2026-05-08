@@ -919,19 +919,33 @@ function closeModal() {
 }
 
 async function plantParcel() {
+  console.log('[plantParcel] selectedCrop:', selectedCrop);
+  console.log('[plantParcel] selectedPlow:', selectedPlow);
+  console.log('[plantParcel] currentId:', currentId);
+
   if (!selectedCrop) return toast('Choisis une culture d\'abord !');
+  
   const p = PARCELLES.find(x => x.id === currentId);
+  console.log('[plantParcel] zone:', p.zone);
+
   if (p.zone === 'champ' && !selectedPlow) return toast('Choisis une charrue d\'abord !');
-  
-  // Sauvegarder avant doPlant() qui reset selectedPlow via closeModal()
+
   const plowToIncrement = selectedPlow;
-  
+  console.log('[plantParcel] plowToIncrement:', plowToIncrement);
+
   await doPlant(currentId, selectedCrop);
-  
+
+  console.log('[plantParcel] après doPlant, plowToIncrement:', plowToIncrement);
+  console.log('[plantParcel] zone champ?', p.zone === 'champ');
+
   if (p.zone === 'champ' && plowToIncrement) {
+    console.log('[plantParcel] incrémentation de', plowToIncrement);
     plowCounts[plowToIncrement]++;
+    console.log('[plantParcel] nouveau count:', plowCounts[plowToIncrement]);
     await savePlow(plowToIncrement);
     renderPlows();
+  } else {
+    console.log('[plantParcel] PAS d\'incrémentation — zone:', p.zone, '| plow:', plowToIncrement);
   }
 }
 async function plantVerger(cultureId) {
