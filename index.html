@@ -323,9 +323,23 @@ header h1 {
   gap: 3px;
   padding: .5rem .25rem;
   border-radius: 9px;
-  transition: background .15s;
+  border: 1px solid transparent;
+  transition: background .15s, border-color .3s, box-shadow .3s;
 }
 .plow-item:hover { background: var(--brand-ghost); }
+.plow-item.warn {
+  border-color: rgba(240,200,74,.5);
+  box-shadow: 0 0 8px rgba(240,200,74,.2);
+}
+.plow-item.danger {
+  border-color: rgba(192,57,43,.6);
+  box-shadow: 0 0 10px rgba(192,57,43,.3);
+  animation: plow-pulse 2s ease-in-out infinite;
+}
+@keyframes plow-pulse {
+  0%,100% { box-shadow: 0 0 6px rgba(192,57,43,.2); }
+  50%      { box-shadow: 0 0 14px rgba(192,57,43,.5); }
+}
 .plow-icon { font-size: 1.4rem; line-height: 1; }
 .plow-name {
   font-size: .58rem;
@@ -1116,7 +1130,7 @@ function renderPlows() {
     const cnt = plowCounts[p.id];
     const cls = cnt >= PLOW_DANGER ? 'danger' : cnt >= PLOW_WARN ? 'warn' : '';
     const item = document.createElement('div');
-    item.className = 'plow-item';
+    item.className = `plow-item ${cls}`;
     item.innerHTML = `
       <span class="plow-icon">${p.emoji}</span>
       <span class="plow-name">${p.nom}</span>
