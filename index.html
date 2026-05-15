@@ -562,7 +562,7 @@
 <!-- ══ CONFIGURATION SUPABASE ══ -->
 <script>
   const SUPABASE_URL  = 'https://hjxrwljefieqomugxjyw.supabase.co';
-  const SUPABASE_ANON = 'sb_publishable_2VRevIq744VzjD2Y1XtF0A_KvudKCmq';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqeHJ3bGplZmllcW9tdWd4anl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwOTU1MTEsImV4cCI6MjA5MTY3MTUxMX0.hpsLXpIIalgtEk9aYnQqHz5nNRIJN9NmnNP5-H8yCfg';
 </script>
 <!-- ════════════════════════════ -->
 
@@ -1160,7 +1160,6 @@ async function harvestParcel() {
   const who = getNom(); if (!who) return;
   const data = state[currentId];
   const cult = CULTURES.find(c => c.id === data?.culture_id);
-  const who = document.getElementById('modal-who')?.value.trim() || data?.plante_par || null;
   const p = PARCELLES.find(x => x.id === currentId);
   const repos_jusqua = p.zone !== 'verger' ? new Date(Date.now() + 60 * 60000).toISOString() : null;
 
