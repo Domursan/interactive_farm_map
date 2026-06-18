@@ -907,6 +907,8 @@ setInterval(() => {
 // ══════════════════════════════════════════════
 // MODAL
 // ══════════════════════════════════════════════
+const CLEAR_PASSWORD = 'Patron';
+
 let currentId = null, selectedCrop = null;
 
 async function openModal(id) {
@@ -1185,18 +1187,24 @@ async function harvestParcel() {
 }
 
 async function clearParcel() {
+  const pwd = prompt('Mot de passe requis pour effacer cette parcelle :');
+  if (pwd === null) return; // annulé
+  if (pwd !== CLEAR_PASSWORD) {
+    toast('❌ Mot de passe incorrect.');
+    return;
+  }
+
   const who = getNom(); if (!who) return;
   if (!confirm('Effacer cette parcelle ?')) return;
+
   const data = state[currentId];
   const cult = CULTURES.find(c => c.id === data?.culture_id);
-  const p = PARCELLES.find(x => x.id === currentId);
-  const repos_jusqua = p.zone !== 'verger' ? new Date(Date.now() + 60 * 60000).toISOString() : null;
-  const row = { id: currentId, culture_id: null, derniere_culture: cult?.id || null, repos_jusqua };
+  const row = { id: currentId, culture_id: null, derniere_culture: cult?.id || null, repos_jusqua: null };
   state[currentId] = row;
   await sb?.from('parcelles').upsert(row);
   await dbLog(currentId, cult?.id, 'effacé', null);
   closeModal(); renderAll();
-  toast(p.zone === 'verger' ? 'Parcelle libérée.' : 'Parcelle libérée. Repos 1h.');
+  toast('Parcelle libérée (sans repos).');
 }
 
 document.getElementById('modal-bg').addEventListener('click', e => {
